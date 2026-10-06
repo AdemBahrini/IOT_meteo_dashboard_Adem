@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="fr" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TP IoT — Ultimate Smart Dashboard</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- FontAwesome for icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Charts -->
+    <script
+      type="text/javascript"
+      src="https://www.gstatic.com/charts/loader.js"
+    ></script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+      }
+      /* Custom glowing animations for the smart bulb */
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          box-shadow:
+            0 0 35px rgba(236, 72, 153, 0.5),
+            inset 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+        50% {
+          box-shadow:
+            0 0 60px rgba(236, 72, 153, 0.9),
+            inset 0 0 30px rgba(255, 255, 255, 1);
+        }
+      }
+      @keyframes pulse-off {
+        0%,
+        100% {
+          box-shadow:
+            0 0 15px rgba(100, 116, 139, 0.2),
+            inset 0 0 5px rgba(0, 0, 0, 0.4);
+        }
+      }
+      .smart-bulb.on {
+        background: radial-gradient(
+          circle at 35% 35%,
+          #f472b6 0%,
+          #ec4899 60%,
+          #be185d 100%
+        );
+        animation: pulse-glow 2.5s infinite ease-in-out;
+      }
+      .smart-bulb.off {
+        background: radial-gradient(
+          circle at 35% 35%,
+          #cbd5e1 0%,
+          #64748b 60%,
+          #334155 100%
+        );
+        animation: pulse-off 3s infinite ease-in-out;
+      }
+      .simulation-standby {
+        filter: grayscale(80%) opacity(0.5);
+        transition: all 0.5s ease;
+      }
+      .simulation-active {
+        filter: grayscale(0%) opacity(1);
+        transition: all 0.5s ease;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-900 text-slate-100 min-h-full flex flex-col justify-between selection:bg-pink-500 selection:text-white"
+  >
+    <!-- TOP HEADER -->
+    <header
+      class="w-full border-b border-white/10 bg-slate-950/60 backdrop-blur-xl sticky top-0 z-50 shadow-2xl"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4"
+      >
+        <div class="flex items-center space-x-3">
+          <div
+            class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-pink-500/30 transform hover:scale-105 transition-transform"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles text-white text-xl"></i>
+          </div>
+          <div>
+            <span
+              class="text-xs font-bold tracking-widest uppercase text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full border border-pink-500/20"
+              >✨ Dashboard Pro & Cute</span
+            >
+            <h1 class="text-2xl font-extrabold tracking-tight text-white mt-1">
+              IoT Smart Ecosystem
+            </h1>
+          </div>
+        </div>
+
+        <!-- Connection Status Badge -->
+        <div
+          class="flex items-center space-x-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full shadow-inner backdrop-blur-md"
+        >
+          <span class="relative flex h-3.5 w-3.5">
+            <span
+              id="pingAnimation"
+              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"
+            ></span>
+            <span
+              id="connectionDot"
+              class="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"
+            ></span>
+          </span>
+          <span
+            id="connectionStatusText"
+            class="text-xs font-semibold text-amber-400"
+            >En attente de Wokwi...</span
+          >
+        </div>
+      </div>
+    </header>
+
+    <main
+      class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 flex-grow space-y-8"
+    >
+      <!-- GRAND TITRE DE PAGE & STATS RAPIDES -->
+      <div class="text-center space-y-2 mb-4">
+        <h2
+          class="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-400"
+        >
+          Centre de Contrôle & Prédictions Météo Intelligentes
+        </h2>
+        <p class="text-sm text-slate-400 max-w-2xl mx-auto">
+          Surveillez votre environnement en direct, anticipez les variations
+          climatiques et pilotez vos actuateurs connectés avec style.
+        </p>
+      </div>
+
+      <!-- Quick Stats Banner -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div
+          class="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex items-center space-x-4 shadow-xl hover:border-pink-500/40 transition-all duration-300"
+        >
+          <div
+            class="p-3.5 bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-400 rounded-xl border border-amber-500/30 shadow-inner"
+          >
+            <i class="fa-solid fa-temperature-arrow-up text-xl"></i>
+          </div>
+          <div>
+            <p
+              class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+            >
+              Température Actuelle
+            </p>
+            <h3
+              id="quickTempVal"
+              class="text-2xl font-extrabold text-slate-300 mt-0.5"
+            >
+              En attente...
+            </h3>
+          </div>
+        </div>
+
+        <div
+          class="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex items-center space-x-4 shadow-xl hover:border-cyan-500/40 transition-all duration-300"
+        >
+          <div
+            class="p-3.5 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-400 rounded-xl border border-cyan-500/30 shadow-inner"
+          >
+            <i class="fa-solid fa-droplet text-xl"></i>
+          </div>
+          <div>
+            <p
+              class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+            >
+              Humidité Actuelle
+            </p>
+            <h3
+              id="quickHumVal"
+              class="text-2xl font-extrabold text-slate-300 mt-0.5"
+            >
+              En attente...
+            </h3>
+          </div>
+        </div>
+
+        <div
+          class="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex items-center space-x-4 shadow-xl hover:border-purple-500/40 transition-all duration-300"
+        >
+          <div
+            class="p-3.5 bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-pink-400 rounded-xl border border-purple-500/30 shadow-inner"
+          >
+            <i class="fa-solid fa-sparkles text-xl"></i>
+          </div>
+          <div>
+            <p
+              class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+            >
+              État Actuateur LED
+            </p>
+            <h3
+              id="quickLedVal"
+              class="text-2xl font-extrabold text-white mt-0.5"
+            >
+              OFF
+            </h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 1 : PRÉDICTION MÉTÉO (Style App Météo très jolie & riche en infos) -->
+      <section
+        class="bg-gradient-to-b from-slate-900/80 to-indigo-950/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+      >
+        <!-- Effet décoratif d'arrière-plan -->
+        <div
+          class="absolute -right-16 -top-16 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"
+        ></div>
+        <div
+          class="absolute -left-16 -bottom-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"
+        ></div>
+
+        <div
+          class="flex items-center justify-between pb-6 border-b border-white/10 mb-6 relative z-10"
+        >
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30"
+            >
+              <i class="fa-solid fa-cloud-sun text-lg"></i>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                Prédiction & Tendances Météo
+                <span
+                  class="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30"
+                  >Live AI & Capteurs</span
+                >
+              </h3>
+              <p class="text-xs text-slate-400">
+                Analyse prédictive basée sur les flux DHT22 de l'ESP32
+              </p>
+            </div>
+          </div>
+          <div class="text-right hidden sm:block">
+            <span class="text-xs text-slate-400 block">Indice de Confort</span>
+            <span id="comfortIndex" class="text-sm font-bold text-emerald-400"
+              >Optimal 🌿</span
+            >
+          </div>
+        </div>
+
+        <!-- Grille Météo Riche -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+          <!-- Widget Principal Météo (Aujourd'hui) -->
+          <div
+            class="lg:col-span-5 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-slate-900/60 p-6 rounded-2xl border border-white/10 flex flex-col justify-between shadow-inner"
+          >
+            <div class="flex justify-between items-start">
+              <div>
+                <span
+                  id="weatherLocation"
+                  class="text-xs font-semibold tracking-wider uppercase text-pink-400"
+                  >Station Wokwi Lab</span
+                >
+                <h4
+                  id="weatherConditionMain"
+                  class="text-2xl font-extrabold text-white mt-1"
+                >
+                  Ciel Dégagé & Stable
+                </h4>
+              </div>
+              <div
+                id="weatherMainIcon"
+                class="text-4xl text-amber-400 animate-bounce"
+              >
+                <i class="fa-solid fa-sun"></i>
+              </div>
+            </div>
+
+            <div class="my-6 flex items-baseline space-x-3">
+              <span id="weatherBigTemp" class="text-5xl font-black text-white"
+                >--°C</span
+              >
+              <span id="weatherFeel" class="text-sm text-slate-400"
+                >Ressenti --°C</span
+              >
+            </div>
+
+            <div
+              class="grid grid-cols-2 gap-3 pt-4 border-t border-white/10 text-xs"
+            >
+              <div class="flex items-center space-x-2 text-slate-300">
+                <i class="fa-solid fa-wind text-cyan-400"></i>
+                <span>Vent: <strong class="text-white">12 km/h</strong></span>
+              </div>
+              <div class="flex items-center space-x-2 text-slate-300">
+                <i class="fa-solid fa-gauge-high text-pink-400"></i>
+                <span
+                  >Pression: <strong class="text-white">1013 hPa</strong></span
+                >
+              </div>
+              <div class="flex items-center space-x-2 text-slate-300">
+                <i class="fa-solid fa-eye text-purple-400"></i>
+                <span
+                  >Visibilité: <strong class="text-white">10 km</strong></span
+                >
+              </div>
+              <div class="flex items-center space-x-2 text-slate-300">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                <span
+                  >Risque Pluie: <strong class="text-white">5%</strong></span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Prévisions sur 4 Jours (Style Cute & Pro) -->
+          <div class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <!-- Jour 1 -->
+            <div
+              class="bg-white/[0.03] hover:bg-white/[0.07] transition-all border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-between text-center group"
+            >
+              <span class="text-xs font-bold text-slate-300 uppercase"
+                >Mardi</span
+              >
+              <div
+                class="my-3 text-amber-400 text-2xl group-hover:scale-110 transition-transform"
+              >
+                <i class="fa-solid fa-cloud-sun"></i>
+              </div>
+              <div class="space-y-1">
+                <span
+                  id="forecastDay1"
+                  class="text-base font-extrabold text-white"
+                  >26° / 18°</span
+                >
+                <p class="text-[11px] text-slate-400">Ensoleillé</p>
+              </div>
+            </div>
+            <!-- Jour 2 -->
+            <div
+              class="bg-white/[0.03] hover:bg-white/[0.07] transition-all border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-between text-center group"
+            >
+              <span class="text-xs font-bold text-slate-300 uppercase"
+                >Mercredi</span
+              >
+              <div
+                class="my-3 text-cyan-400 text-2xl group-hover:scale-110 transition-transform"
+              >
+                <i class="fa-solid fa-cloud-rain"></i>
+              </div>
+              <div class="space-y-1">
+                <span
+                  id="forecastDay2"
+                  class="text-base font-extrabold text-white"
+                  >22° / 15°</span
+                >
+                <p class="text-[11px] text-slate-400">Averses légères</p>
+              </div>
+            </div>
+            <!-- Jour 3 -->
+            <div
+              class="bg-white/[0.03] hover:bg-white/[0.07] transition-all border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-between text-center group"
+            >
+              <span class="text-xs font-bold text-slate-300 uppercase"
+                >Jeudi</span
+              >
+              <div
+                class="my-3 text-amber-400 text-2xl group-hover:scale-110 transition-transform"
+              >
+                <i class="fa-solid fa-sun"></i>
+              </div>
+              <div class="space-y-1">
+                <span
+                  id="forecastDay3"
+                  class="text-base font-extrabold text-white"
+                  >27° / 19°</span
+                >
+                <p class="text-[11px] text-slate-400">Chaud & Clair</p>
+              </div>
+            </div>
+            <!-- Jour 4 -->
+            <div
+              class="bg-white/[0.03] hover:bg-white/[0.07] transition-all border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-between text-center group"
+            >
+              <span class="text-xs font-bold text-slate-300 uppercase"
+                >Vendredi</span
+              >
+              <div
+                class="my-3 text-purple-400 text-2xl group-hover:scale-110 transition-transform"
+              >
+                <i class="fa-solid fa-cloud-bolt"></i>
+              </div>
+              <div class="space-y-1">
+                <span
+                  id="forecastDay4"
+                  class="text-base font-extrabold text-white"
+                  >21° / 16°</span
+                >
+                <p class="text-[11px] text-slate-400">Orageux</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2 & 3 : LED SECTION & JAUGES EN BAS -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- SENSORS SECTION (DHT22 Gauges) -> En Bas à Gauche -->
+        <div
+          class="lg:col-span-7 bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between"
+        >
+          <div>
+            <div
+              class="flex items-center justify-between pb-6 border-b border-white/10"
+            >
+              <div class="flex items-center space-x-3">
+                <div
+                  class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20"
+                >
+                  <i class="fa-solid fa-gauge text-sm"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">
+                    Capteur DHT22 (Jauges Temps Réel)
+                  </h3>
+                  <p class="text-xs text-slate-400">
+                    Données transmises par l'ESP32 en direct
+                  </p>
+                </div>
+              </div>
+              <span
+                id="gaugeStatusBadge"
+                class="text-xs px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold"
+                >Simulation Arrêtée</span
+              >
+            </div>
+
+            <!-- Google Gauges Container -->
+            <div
+              id="gaugesWrapper"
+              class="py-6 flex flex-wrap items-center justify-around gap-6 simulation-standby"
+            >
+              <div
+                class="flex flex-col items-center bg-slate-950/60 p-5 rounded-2xl border border-white/10 shadow-inner"
+              >
+                <div id="temp_gauge_div"></div>
+                <span class="text-xs text-slate-400 mt-3 font-medium"
+                  >Plage: 0°C - 50°C</span
+                >
+              </div>
+              <div
+                class="flex flex-col items-center bg-slate-950/60 p-5 rounded-2xl border border-white/10 shadow-inner"
+              >
+                <div id="hum_gauge_div"></div>
+                <span class="text-xs text-slate-400 mt-3 font-medium"
+                  >Plage: 0% - 100%</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-4 flex items-center space-x-3 mt-4"
+          >
+            <i
+              class="fa-solid fa-circle-info text-cyan-400 text-lg flex-shrink-0"
+            ></i>
+            <p
+              id="simulationInfoText"
+              class="text-xs text-indigo-200 leading-relaxed"
+            >
+              Les jauges sont actuellement en veille. Lancez la simulation Wokwi
+              pour connecter l'ESP32 et afficher les flux en direct.
+            </p>
+          </div>
+        </div>
+
+        <!-- ACTUATOR SECTION (Smart Bulb Control) -> En Bas à Droite -->
+        <div
+          class="lg:col-span-5 bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between"
+        >
+          <div>
+            <div
+              class="flex items-center justify-between pb-6 border-b border-white/10"
+            >
+              <div class="flex items-center space-x-3">
+                <div
+                  class="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-pink-500/20"
+                >
+                  <i class="fa-solid fa-bolt-lightning text-sm"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">
+                    Section LED & Actuateur
+                  </h3>
+                  <p class="text-xs text-slate-400">
+                    Contrôle bidirectionnel Firebase
+                  </p>
+                </div>
+              </div>
+              <span
+                id="badgeState"
+                class="text-xs px-3 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold"
+                >OFF</span
+              >
+            </div>
+
+            <!-- Modern Smart Bulb Indicator -->
+            <div class="py-6 flex flex-col items-center justify-center">
+              <div class="relative flex items-center justify-center mb-4">
+                <!-- Outer Glow Beam Effect -->
+                <div
+                  id="bulbBeam"
+                  class="absolute w-40 h-40 rounded-full bg-rose-500/10 blur-xl transition-all duration-500 pointer-events-none"
+                ></div>
+
+                <!-- Bulb Body Graphic -->
+                <div class="flex flex-col items-center relative z-10">
+                  <div
+                    id="lamp1"
+                    class="smart-bulb off w-20 h-28 rounded-t-full rounded-b-2xl flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105"
+                  >
+                    <i
+                      id="bulbIcon"
+                      class="fa-solid fa-power-off text-white/90 text-2xl drop-shadow"
+                    ></i>
+                  </div>
+                  <!-- Bulb Base Fixture -->
+                  <div
+                    class="w-8 h-4 bg-slate-600 rounded-b-md border-t border-slate-500 shadow"
+                  ></div>
+                  <div class="w-6 h-2 bg-slate-500 rounded-sm"></div>
+                </div>
+              </div>
+
+              <div class="text-center mt-2">
+                <p
+                  id="ledText1"
+                  class="text-xl font-extrabold tracking-tight text-white"
+                >
+                  LED1 OFF
+                </p>
+                <p class="text-xs text-slate-400 mt-1">
+                  Cliquez sur l'ampoule ou les boutons pour basculer
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+            <button
+              id="btn0n1"
+              class="group relative flex items-center justify-center space-x-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg shadow-emerald-600/30 transition-all duration-200 active:scale-95 border border-emerald-500/40"
+            >
+              <i
+                class="fa-solid fa-circle-check text-sm group-hover:scale-110 transition-transform"
+              ></i>
+              <span>ALLUMER</span>
+            </button>
+            <button
+              id="btn0ff1"
+              class="group relative flex items-center justify-center space-x-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold shadow-lg shadow-rose-600/30 transition-all duration-200 active:scale-95 border border-rose-500/40"
+            >
+              <i
+                class="fa-solid fa-circle-xmark text-sm group-hover:scale-110 transition-transform"
+              ></i>
+              <span>ÉTEINDRE</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4 : LES LOGS TOUUT EN BAS -->
+      <section
+        class="bg-slate-950/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl"
+      >
+        <div
+          class="flex items-center justify-between pb-4 border-b border-white/10 mb-4"
+        >
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 border border-purple-500/30"
+            >
+              <i class="fa-solid fa-terminal text-xs"></i>
+            </div>
+            <h3 class="text-base font-bold text-white">
+              Journal des Événements & Logs Système
+            </h3>
+          </div>
+          <button
+            id="clearLogsBtn"
+            class="text-xs text-slate-400 hover:text-white bg-white/5 px-3 py-1 rounded-lg border border-white/10 transition-colors"
+          >
+            Effacer les logs
+          </button>
+        </div>
+        <!-- Conteneur des logs en mode console propre -->
+        <div
+          id="logsContainer"
+          class="bg-slate-950 font-mono text-xs text-slate-300 p-4 rounded-2xl h-36 overflow-y-auto space-y-2 border border-white/5 shadow-inner"
+        >
+          <div class="text-slate-500">
+            [System] Initialisation du dashboard IoT en cours... En attente de
+            connexion Firebase & Wokwi.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer
+      class="w-full border-t border-white/10 bg-slate-950 py-6 text-center text-xs text-slate-500"
+    >
+      <p class="flex items-center justify-center gap-2">
+        <span>TP IoT Dashboard • Realtime Firebase Integration</span> •
+        <span class="text-pink-400 font-semibold"
+          >✨ Conçu avec élégance & interactivité</span
+        >
+      </p>
+    </footer>
+
+    <!-- LOGIQUE JAVASCRIPT ET FIREBASE -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        onValue,
+        set,
+      } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+      // Configuration Firebase exacte demandée
+      const firebaseConfig = {
+        apiKey: "AIzaSyAdtc8x2azbDszlh5tfqe_embAdhqLwm9E",
+        authDomain: "dht22-firebase-ed3ea.firebaseapp.com",
+        databaseURL:
+          "https://dht22-firebase-ed3ea-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "dht22-firebase-ed3ea",
+        storageBucket: "dht22-firebase-ed3ea.firebasestorage.app",
+        messagingSenderId: "938409305743",
+        appId: "1:938409305743:web:82d901cc31f1a77c1f32fa",
+        measurementId: "G-JYZVH2F2BB",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      // Références Firebase spécifiques
+      const ledRef1 = ref(db, "/Led_1");
+      const tempRef = ref(db, "/temperature");
+      const humRef = ref(db, "/humidity");
+      const aiRef = ref(db, "/ai_prediction"); // Nœud des prédictions IA de Python
+
+      const lamp1 = document.getElementById("lamp1");
+      const bulbBeam = document.getElementById("bulbBeam");
+      const ledText1 = document.getElementById("ledText1");
+      const badgeState = document.getElementById("badgeState");
+      const quickLedVal = document.getElementById("quickLedVal");
+      const quickTempVal = document.getElementById("quickTempVal");
+      const quickHumVal = document.getElementById("quickHumVal");
+      const connectionDot = document.getElementById("connectionDot");
+      const pingAnimation = document.getElementById("pingAnimation");
+      const connectionStatusText = document.getElementById(
+        "connectionStatusText",
+      );
+      const gaugesWrapper = document.getElementById("gaugesWrapper");
+      const gaugeStatusBadge = document.getElementById("gaugeStatusBadge");
+      const simulationInfoText = document.getElementById("simulationInfoText");
+      const logsContainer = document.getElementById("logsContainer");
+
+      // Éléments Météo Avancée
+      const weatherBigTemp = document.getElementById("weatherBigTemp");
+      const weatherFeel = document.getElementById("weatherFeel");
+      const weatherConditionMain = document.getElementById(
+        "weatherConditionMain",
+      );
+      const comfortIndex = document.getElementById("comfortIndex");
+      const forecastDay1 = document.getElementById("forecastDay1");
+      const forecastDay2 = document.getElementById("forecastDay2");
+      const forecastDay3 = document.getElementById("forecastDay3");
+      const forecastDay4 = document.getElementById("forecastDay4");
+
+      let isSimulationConnected = false;
+      let lastDataTimestamp = 0;
+      const TIMEOUT_THRESHOLD = 15000; // 15 secondes
+
+      let currentTemp = 0;
+      let currentHum = 0;
+
+      // Fonction d'ajout de logs stylisée
+      function addLog(message, type = "info") {
+        const timeStr = new Date().toLocaleTimeString();
+        const colorClass =
+          type === "success"
+            ? "text-emerald-400"
+            : type === "error"
+              ? "text-rose-400"
+              : "text-cyan-300";
+        const logDiv = document.createElement("div");
+        logDiv.className = `${colorClass} transition-all`;
+        logDiv.textContent = `[${timeStr}] ${message}`;
+        logsContainer.appendChild(logDiv);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+
+      document.getElementById("clearLogsBtn").onclick = () => {
+        logsContainer.innerHTML = `<div class="text-slate-500">[System] Logs réinitialisés.</div>`;
+      };
+
+      // --- Configuration des Jauges Google Charts ---
+      google.charts.load("current", { packages: ["gauge"] });
+      google.charts.setOnLoadCallback(drawCharts);
+
+      let tempChart, humChart, tempDatatable, humDatatable;
+      let tempOptions = {
+        width: 190,
+        height: 190,
+        min: 0,
+        max: 50,
+        yellowFrom: 35,
+        yellowTo: 42,
+        redFrom: 42,
+        redTo: 50,
+        minorTicks: 5,
+        greenColor: "#10b981",
+        yellowColor: "#f59e0b",
+        redColor: "#ef4444",
+      };
+      let humOptions = {
+        width: 190,
+        height: 190,
+        min: 0,
+        max: 100,
+        yellowFrom: 75,
+        yellowTo: 90,
+        redFrom: 90,
+        redTo: 100,
+        minorTicks: 5,
+        greenColor: "#06b6d4",
+        yellowColor: "#3b82f6",
+        redColor: "#6366f1",
+      };
+
+      function drawCharts() {
+        tempDatatable = google.visualization.arrayToDataTable([
+          ["Label", "Value"],
+          ["Temp (°C)", 0],
+        ]);
+        humDatatable = google.visualization.arrayToDataTable([
+          ["Label", "Value"],
+          ["Humidité (%)", 0],
+        ]);
+
+        tempChart = new google.visualization.Gauge(
+          document.getElementById("temp_gauge_div"),
+        );
+        humChart = new google.visualization.Gauge(
+          document.getElementById("hum_gauge_div"),
+        );
+
+        tempChart.draw(tempDatatable, tempOptions);
+        humChart.draw(humDatatable, humOptions);
+      }
+
+      // Activer visuellement les jauges et badges dès que Wokwi envoie des données
+      function setSimulationActive(active) {
+        if (active === isSimulationConnected) return;
+        isSimulationConnected = active;
+
+        if (active) {
+          connectionDot.className =
+            "relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500";
+          pingAnimation.className =
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+          connectionStatusText.textContent = "Wokwi En Direct 🟢";
+          connectionStatusText.className =
+            "text-xs font-semibold text-emerald-400";
+
+          gaugesWrapper.classList.remove("simulation-standby");
+          gaugesWrapper.classList.add("simulation-active");
+
+          gaugeStatusBadge.textContent = "En Direct 🟢";
+          gaugeStatusBadge.className =
+            "text-xs px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold";
+          simulationInfoText.textContent =
+            "Simulation Wokwi active ! Les données DHT22 sont synchronisées en temps réel depuis l'ESP32.";
+          addLog("Connexion ESP32 / Wokwi établie avec succès.", "success");
+        } else {
+          connectionDot.className =
+            "relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500";
+          pingAnimation.className =
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+          connectionStatusText.textContent = "En attente de Wokwi...";
+          connectionStatusText.className =
+            "text-xs font-semibold text-amber-400";
+
+          gaugesWrapper.classList.add("simulation-standby");
+          gaugesWrapper.classList.remove("simulation-active");
+
+          gaugeStatusBadge.textContent = "En Attente 🔴";
+          gaugeStatusBadge.className =
+            "text-xs px-3.5 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold";
+          simulationInfoText.textContent =
+            "Les jauges sont en veille. Démarrez la simulation Wokwi pour connecter l'ESP32.";
+
+          quickTempVal.textContent = "En attente...";
+          quickHumVal.textContent = "En attente...";
+        }
+      }
+
+      // Mise à jour de la météo intelligente et prédictive
+      function updateWeatherWidget(temp, hum) {
+        weatherBigTemp.textContent = temp.toFixed(1) + "°C";
+        weatherFeel.textContent = `Ressenti ${(temp + 0.5).toFixed(1)}°C`;
+
+        if (temp > 30) {
+          weatherConditionMain.textContent = "Chaud & Sec 🔥";
+          comfortIndex.textContent = "Attention Chaleur ☀";
+          comfortIndex.className = "text-sm font-bold text-amber-400";
+        } else if (temp < 15) {
+          weatherConditionMain.textContent = "Frais & Humide ❄️️";
+          comfortIndex.textContent = "Couvrez-vous 🧣";
+          comfortIndex.className = "text-sm font-bold text-cyan-400";
+        } else {
+          weatherConditionMain.textContent = "Climat Idéal & Stable 🌸";
+          comfortIndex.textContent = "Optimal 🌿";
+          comfortIndex.className = "text-sm font-bold text-emerald-400";
+        }
+
+        forecastDay1.textContent = `${(temp + 1).toFixed(0)}° / ${(temp - 5).toFixed(0)}°`;
+        forecastDay2.textContent = `${(temp - 2).toFixed(0)}° / ${(temp - 7).toFixed(0)}°`;
+        forecastDay3.textContent = `${(temp + 2).toFixed(0)}° / ${(temp - 4).toFixed(0)}°`;
+        forecastDay4.textContent = `${(temp - 1).toFixed(0)}° / ${(temp - 6).toFixed(0)}°`;
+      }
+
+      // Mettre à jour les jauges et en-têtes dynamiquement
+      function updateGauges() {
+        lastDataTimestamp = Date.now();
+        setSimulationActive(true);
+
+        quickTempVal.textContent = currentTemp.toFixed(1) + " °C";
+        quickHumVal.textContent = currentHum.toFixed(1) + " %";
+
+        if (tempDatatable && humDatatable) {
+          tempDatatable.setValue(0, 1, currentTemp);
+          humDatatable.setValue(0, 1, currentHum);
+          tempChart.draw(tempDatatable, tempOptions);
+          humChart.draw(humDatatable, humOptions);
+        }
+
+        updateWeatherWidget(currentTemp, currentHum);
+      }
+
+      // Vérification périodique du timeout Wokwi
+      setInterval(() => {
+        if (isSimulationConnected && lastDataTimestamp > 0) {
+          if (Date.now() - lastDataTimestamp > TIMEOUT_THRESHOLD) {
+            setSimulationActive(false);
+            addLog(
+              "Alerte: Perte de signal Wokwi / Inactivité prolongée.",
+              "error",
+            );
+          }
+        }
+      }, 1000);
+
+      // Gestion moderne et visuelle de la LED
+      function setLedState(lamp, label, state) {
+        const isOn = !!state;
+        lamp.classList.toggle("on", isOn);
+        lamp.classList.toggle("off", !isOn);
+
+        if (isOn) {
+          label.textContent = "LED1 ON";
+          badgeState.textContent = "ON";
+          badgeState.className =
+            "text-xs px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold";
+          quickLedVal.textContent = "ON";
+          quickLedVal.className =
+            "text-2xl font-extrabold text-emerald-400 mt-0.5";
+          bulbBeam.className =
+            "absolute w-48 h-48 rounded-full bg-pink-500/30 blur-xl transition-all duration-500 pointer-events-none";
+          addLog("Actuateur LED1 basculé sur : ALLUMÉ (ON)", "success");
+        } else {
+          label.textContent = "LED1 OFF";
+          badgeState.textContent = "OFF";
+          badgeState.className =
+            "text-xs px-3.5 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold";
+          quickLedVal.textContent = "OFF";
+          quickLedVal.className =
+            "text-2xl font-extrabold text-slate-100 mt-0.5";
+          bulbBeam.className =
+            "absolute w-40 h-40 rounded-full bg-rose-500/10 blur-xl transition-all duration-500 pointer-events-none";
+          addLog("Actuateur LED1 basculé sur : ÉTEINT (OFF)", "info");
+        }
+      }
+
+      // Événements boutons avec écriture sécurisée Firebase
+      document.getElementById("btn0n1").onclick = () => {
+        set(ledRef1, true);
+        addLog("Commande manuelle envoyée : Allumer LED1", "info");
+      };
+      document.getElementById("btn0ff1").onclick = () => {
+        set(ledRef1, false);
+        addLog("Commande manuelle envoyée : Éteindre LED1", "info");
+      };
+
+      // Clic interactif direct sur l'ampoule
+      lamp1.onclick = () => {
+        const currentlyOn = lamp1.classList.contains("on");
+        set(ledRef1, !currentlyOn);
+      };
+
+      // Écoute en temps réel de Firebase pour la LED
+      onValue(
+        ledRef1,
+        (snap) => {
+          setLedState(lamp1, ledText1, snap.val());
+        },
+        (error) => {
+          addLog("Erreur Firebase LED: " + error.message, "error");
+        },
+      );
+
+      // Écoute en temps réel de la Température
+      onValue(
+        tempRef,
+        (snap) => {
+          const val = snap.val();
+          if (val !== null && val !== undefined) {
+            currentTemp = Number(val);
+            updateGauges();
+          }
+        },
+        (error) => {
+          addLog("Erreur Firebase Température: " + error.message, "error");
+        },
+      );
+
+      // Écoute en temps réel de l'Humidité
+      onValue(
+        humRef,
+        (snap) => {
+          const val = snap.val();
+          if (val !== null && val !== undefined) {
+            currentHum = Number(val);
+            updateGauges();
+          }
+        },
+        (error) => {
+          addLog("Erreur Firebase Humidité: " + error.message, "error");
+        },
+      );
+
+      // Écoute en temps réel des prédictions IA calculées par Python
+      onValue(
+        aiRef,
+        (snap) => {
+          const aiData = snap.val();
+          if (aiData) {
+            addLog(
+              `🤖 [IA Live] Tendance : ${aiData.tendance} | Message : ${aiData.message}`,
+              "success",
+            );
+
+            if (weatherConditionMain && aiData.confort) {
+              weatherConditionMain.textContent = `${aiData.confort} (${aiData.tendance})`;
+            }
+          }
+        },
+        (error) => {
+          console.error("Erreur Firebase IA:", error);
+        },
+      );
+    </script>
+  </body>
+</html>
